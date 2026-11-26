@@ -46,6 +46,19 @@ var _blip_cooldown := 0.0
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_setup_buses()
+	var settings := get_node_or_null("/root/Settings")
+	if settings != null and not settings.sound:
+		print("audio: sound disabled in settings, not rendering")
+		AudioServer.set_bus_mute(AudioServer.get_bus_index("Master"), true)
+		return
+	start_render()
+
+
+## Render the soundtrack on a background thread (once).
+func start_render() -> void:
+	if _thread != null:
+		return
+	AudioServer.set_bus_mute(AudioServer.get_bus_index("Master"), false)
 	_thread = Thread.new()
 	_thread.start(_render)
 

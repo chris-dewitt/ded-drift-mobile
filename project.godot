@@ -14,8 +14,15 @@ boot_splash/bg_color=Color(0.02, 0.025, 0.035, 1)
 
 [autoload]
 
+Settings="*res://game/core/settings.gd"
 RunState="*res://game/core/run_state.gd"
 Audio="*res://game/audio/audio_director.gd"
+Autopilot="*res://game/core/autopilot.gd"
+
+[debug]
+
+file_logging/enable_file_logging=true
+file_logging/max_log_files=5
 
 [display]
 

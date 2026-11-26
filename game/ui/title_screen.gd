@@ -31,6 +31,9 @@ var _version_rect := Rect2()
 var _ship_pos := Vector2.ZERO
 var _ship_vel := Vector2(22.0, -7.0)
 var _ship_rot := -0.3
+var _crt_rect := Rect2()
+var _sound_rect := Rect2()
+var _crash_rect := Rect2()
 
 
 func _ready() -> void:
@@ -76,7 +79,18 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	var pos := touch.position
 	_taps.append([pos, 0.0])
-	if _version_rect.grow(24.0).has_point(pos):
+	var settings := get_node_or_null("/root/Settings")
+	if settings != null and _crt_rect.has_point(pos):
+		settings.set_crt(not settings.crt)
+		get_tree().reload_current_scene()  # rebuild with / without the CRT pass
+	elif settings != null and _sound_rect.has_point(pos):
+		settings.set_sound(not settings.sound)
+		var audio := get_node_or_null("/root/Audio")
+		if audio != null and settings.sound:
+			audio.start_render()
+	elif settings != null and settings.last_session_crashed:
+		settings.dismiss_crash()  # first tap just dismisses the crash report
+	elif _version_rect.grow(24.0).has_point(pos):
 		_show_debug = not _show_debug
 	elif not _launching:
 		_launching = true
@@ -104,8 +118,10 @@ func _draw() -> void:
 	_draw_taps()
 	_draw_status(safe)
 	_draw_version(safe)
+	_draw_toggles(safe)
 	if _show_debug:
 		_draw_debug(view, safe)
+	_draw_crash_report(safe)
 	_draw_scanlines(view)
 
 
@@ -202,3 +218,42 @@ func _draw_scanlines(view: Rect2) -> void:
 	while y < view.size.y:
 		draw_line(Vector2(0, y), Vector2(view.size.x, y), Color(0, 0, 0, 0.18), 1.0)
 		y += 3.0
+
+
+## Safe-mode toggles, top-right. Big enough for a thumb.
+func _draw_toggles(safe: Rect2) -> void:
+	var settings := get_node_or_null("/root/Settings")
+	if settings == null:
+		return
+	_sound_rect = Rect2(safe.end.x - 190.0, safe.position.y + 14.0, 176.0, 52.0)
+	_crt_rect = Rect2(safe.end.x - 380.0, safe.position.y + 14.0, 176.0, 52.0)
+	for pair in [[_crt_rect, "CRT", settings.crt], [_sound_rect, "SOUND", settings.sound]]:
+		var r: Rect2 = pair[0]
+		var on: bool = pair[2]
+		var col := CYAN if on else DIM
+		draw_rect(r, Color(0, 0, 0, 0.6))
+		draw_rect(r, col, false, 2.0)
+		draw_string(_font, Vector2(r.position.x, r.position.y + 34.0), "%s: %s" % [pair[1], "ON" if on else "OFF"],
+			HORIZONTAL_ALIGNMENT_CENTER, r.size.x, 22, col)
+
+
+## Shown once after a session that didn't close cleanly.
+func _draw_crash_report(safe: Rect2) -> void:
+	var settings := get_node_or_null("/root/Settings")
+	if settings == null or not settings.last_session_crashed:
+		return
+	var lines: Array = ["Last session crashed. Screenshot this for Claude, then tap to dismiss.",
+		"Try switching CRT or SOUND off (top right) to narrow it down.", ""]
+	for l in settings.last_log_tail:
+		lines.append(l)
+	if settings.last_log_tail.is_empty():
+		lines.append("(no log from the last session)")
+	var box := Rect2(safe.position.x + 40.0, safe.position.y + 80.0, safe.size.x - 80.0, 30.0 + 21.0 * lines.size())
+	_crash_rect = box
+	draw_rect(box, Color(0.08, 0.0, 0.0, 0.92))
+	draw_rect(box, Color(1.0, 0.3, 0.26), false, 2.0)
+	for i in lines.size():
+		draw_string(_font, Vector2(box.position.x + 14.0, box.position.y + 24.0 + 21.0 * i), String(lines[i]),
+			HORIZONTAL_ALIGNMENT_LEFT, box.size.x - 28.0, 14 if i > 2 else 17,
+			Color(1.0, 0.75, 0.7) if i > 2 else Color(1.0, 0.4, 0.35))
+

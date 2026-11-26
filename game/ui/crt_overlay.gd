@@ -13,6 +13,9 @@ func _init() -> void:
 
 
 func _ready() -> void:
+	var settings := get_node_or_null("/root/Settings")
+	if settings != null and not settings.crt:
+		return  # safe mode: no screen-texture pass at all
 	_mat = ShaderMaterial.new()
 	_mat.shader = SHADER
 	_rect = ColorRect.new()

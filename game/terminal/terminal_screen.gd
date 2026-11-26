@@ -129,7 +129,8 @@ func _on_special(which: String) -> void:
 			_sys_edit.position = Vector2(0, -4000)
 			_sys_edit.grab_focus()
 			_sys_edit.caret_column = buffer.length()
-			DisplayServer.virtual_keyboard_show(buffer)
+			if DisplayServer.has_feature(DisplayServer.FEATURE_VIRTUAL_KEYBOARD):
+				DisplayServer.virtual_keyboard_show(buffer)
 
 
 ## Send the typed line to the rule engine and render its verdict.
@@ -166,7 +167,8 @@ func _on_outcome(kind: String) -> void:
 	_outcome_age = 0.0
 	keyboard.enabled = false
 	_sys_edit.release_focus()
-	DisplayServer.virtual_keyboard_hide()
+	if DisplayServer.has_feature(DisplayServer.FEATURE_VIRTUAL_KEYBOARD):
+		DisplayServer.virtual_keyboard_hide()
 	if kind == "EXPLOIT":
 		var rng := RandomNumberGenerator.new()
 		rng.seed = 7
