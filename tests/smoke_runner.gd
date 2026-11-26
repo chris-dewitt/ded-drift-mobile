@@ -8,6 +8,7 @@ extends SceneTree
 ##   xvfb-run godot --path . --rendering-driver opengl3 --script res://tests/smoke_runner.gd
 
 const RunStateScript := preload("res://game/core/run_state.gd")
+const AudioScript := preload("res://game/audio/audio_director.gd")
 const SaveSchema := preload("res://game/core/save_schema.gd")
 
 var _failures: Array[String] = []
@@ -20,6 +21,10 @@ func _initialize() -> void:
 		rs = RunStateScript.new()
 		rs.name = "RunState"
 		root.add_child(rs)
+	if root.get_node_or_null("Audio") == null:
+		var audio = AudioScript.new()
+		audio.name = "Audio"
+		root.add_child(audio)
 	rs.save_path = "user://smoke_meta.json"
 	rs.meta = SaveSchema.default_meta()
 	rs.sector = 1
@@ -123,6 +128,31 @@ func _run() -> void:
 	flight = current_scene
 	await _frames(2)
 	_check(flight.cfg["name"] == "SLAG BELT", "sector 2 config loaded")
+	var raider_seen := false
+	var bolts_seen := false
+	for i in 3600:
+		if i % 60 == 0:
+			flight.controls.debug_aim = Vector2.from_angle(rng.randf() * TAU)
+			flight.controls.debug_thrust = rng.randf() < 0.5
+		flight.run.hull = 100.0
+		flight._step(flight.STEP)
+		for r in flight.raiders:
+			if r.active:
+				raider_seen = true
+		if flight.enemy_bolts.size() > 0:
+			bolts_seen = true
+	flight.controls.debug_thrust = false
+	_check(raider_seen, "Krellborn raiders show up in sector 2")
+	_check(bolts_seen, "raiders shoot")
+	await _frames(3)  # draw raiders, bolts, backdrop
+	var audio = root.get_node_or_null("Audio")
+	if audio != null:
+		for _i in 900:
+			if audio.is_ready:
+				break
+			await process_frame
+		_check(audio.is_ready, "procedural soundtrack finished rendering")
+		_check(audio.mood() == "chase" or audio.mood() == "calm", "flight sets a music mood")
 
 	print("smoke: pause")
 	flight.controls.press_pause_for_test()

@@ -11,6 +11,7 @@ const Fmt := preload("res://game/core/fmt.gd")
 const CYAN := Color(0.25, 0.88, 0.82)
 const AMBER := Color(1.0, 0.70, 0.28)
 const RED := Color(1.0, 0.32, 0.28)
+const MAGENTA := Color(1.0, 0.28, 0.78)
 const DIM := Color(0.55, 0.60, 0.65)
 const WHITE := Color(1, 1, 1)
 const BAX_CPS := 45.0
@@ -23,6 +24,8 @@ var quit_rect := Rect2()
 var _font: Font
 var _bax_text := ""
 var _bax_age := 99.0
+var _bax_shown := 0
+var _audio: Node
 
 
 func _ready() -> void:
@@ -30,11 +33,13 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_font = ThemeDB.fallback_font
+	_audio = get_node_or_null("/root/Audio")
 
 
 func show_bax(line: String) -> void:
 	_bax_text = line
 	_bax_age = 0.0
+	_bax_shown = 0
 
 
 func bax_text() -> String:
@@ -43,6 +48,12 @@ func bax_text() -> String:
 
 func _process(delta: float) -> void:
 	_bax_age += delta
+	# Bax's voice: a blip every couple of typed characters.
+	var shown := mini(_bax_text.length(), int(_bax_age * BAX_CPS))
+	if shown > _bax_shown:
+		if _audio != null and shown / 2 != _bax_shown / 2 and _bax_text[shown - 1] != " ":
+			_audio.bax_blip()
+		_bax_shown = shown
 
 
 func _draw() -> void:
@@ -81,6 +92,9 @@ func _draw_top_bar(safe: Rect2) -> void:
 	var y := safe.position.y + 12.0
 	var flicker := hull < 60.0 and randf() < (0.10 if hull >= 30.0 else 0.22)
 	var bar_color := CYAN if hull > 60.0 else (AMBER if hull > 30.0 else RED)
+	var strip := Rect2(0, 0, get_viewport_rect().size.x, safe.position.y + 52.0)
+	draw_rect(strip, Color(0.0, 0.0, 0.0, 0.55))
+	draw_line(Vector2(0, strip.end.y), Vector2(strip.end.x, strip.end.y), Color(CYAN, 0.18 if not flicker else 0.05), 2.0)
 	# Hull bar
 	_text(Vector2(x, y + 18), "HULL", 16, DIM)
 	var bar := Rect2(x + 50.0, y + 4.0, 180.0, 16.0)
@@ -121,13 +135,14 @@ func _draw_bax(safe: Rect2) -> void:
 		return
 	var alpha := clampf((BAX_HOLD + 0.5 - _bax_age) / 0.5, 0.0, 1.0)
 	var w := minf(560.0, safe.size.x * 0.46)
-	var box := Rect2(safe.position.x + 16.0, safe.position.y + 60.0, w, 78.0)
+	var full := _font.get_multiline_string_size(_bax_text, HORIZONTAL_ALIGNMENT_LEFT, w - 68.0, 18)
+	var box := Rect2(safe.position.x + 16.0, safe.position.y + 62.0, w, maxf(44.0, full.y + 20.0))
 	var shown := _bax_text.substr(0, int(_bax_age * BAX_CPS))
 	draw_rect(box, Color(0, 0, 0, 0.7 * alpha))
 	draw_rect(box, Color(AMBER, alpha), false, 2.0)
 	_text(box.position + Vector2(12, 22), "BAX", 16, Color(AMBER, alpha))
 	draw_multiline_string(_font, box.position + Vector2(56, 22), shown, HORIZONTAL_ALIGNMENT_LEFT,
-		w - 68.0, 18, 3, Color(WHITE, alpha))
+		w - 68.0, 18, -1, Color(WHITE, alpha))
 
 
 func _draw_indicators(safe: Rect2) -> void:
@@ -136,31 +151,38 @@ func _draw_indicators(safe: Rect2) -> void:
 	var to_screen: Transform2D = flight.get_global_transform_with_canvas()
 	var inner := safe.grow(-40.0)
 	for b in flight.barges:
-		if not b.is_active():
-			continue
-		var p: Vector2 = to_screen * b.pos
-		if inner.has_point(p):
-			continue
-		var centre := inner.get_center()
-		var dir := (p - centre).normalized()
-		var edge := Vector2(clampf(p.x, inner.position.x, inner.end.x), clampf(p.y, inner.position.y + 90.0, inner.end.y))
-		var tri := PackedVector2Array([edge + dir * 16.0, edge + dir.rotated(2.5) * 13.0, edge + dir.rotated(-2.5) * 13.0])
-		draw_colored_polygon(tri, RED)
-		var dist := int(flight.ship.pos.distance_to(b.pos) / 10.0)
-		_text(edge - dir * 30.0 + Vector2(-20, 6), "404 %dm" % dist, 14, RED)
+		if b.is_active():
+			_indicator(to_screen * b.pos, inner, flight.ship.pos.distance_to(b.pos), "404", RED)
+	for r in flight.raiders:
+		if r.active and not r.dead:
+			_indicator(to_screen * r.pos, inner, flight.ship.pos.distance_to(r.pos), "KRB", MAGENTA)
+
+
+func _indicator(p: Vector2, inner: Rect2, world_dist: float, tag: String, color: Color) -> void:
+	if inner.has_point(p):
+		return
+	var dir := (p - inner.get_center()).normalized()
+	var edge := Vector2(clampf(p.x, inner.position.x, inner.end.x), clampf(p.y, inner.position.y + 90.0, inner.end.y))
+	var tri := PackedVector2Array([edge + dir * 16.0, edge + dir.rotated(2.5) * 13.0, edge + dir.rotated(-2.5) * 13.0])
+	draw_colored_polygon(tri, color)
+	_text(edge - dir * 30.0 + Vector2(-20, 6), "%s %dm" % [tag, int(world_dist / 10.0)], 14, color)
 
 
 func _draw_tutorial(safe: Rect2) -> void:
 	var lines := [
-		"LEFT THUMB, anywhere: AIM the ship",
-		"RIGHT THUMB: THRUST  ·  RETRO to slow down",
+		"LEFT THUMB: AIM  ·  RIGHT THUMB: THRUST",
+		"RETRO slows you down",
 		"Guns AUTO-FIRE at whatever you aim at",
-		"Survive till the GATE opens, then hit JUMP",
+		"Survive till the GATE opens, then JUMP",
 	]
-	var box := Rect2(safe.get_center().x - 330.0, safe.get_center().y - 30.0, 660.0, 132.0)
-	draw_rect(box, Color(0, 0, 0, 0.55))
+	# Bottom centre, between the thumbs: never over the ship (screen centre).
+	var w := minf(480.0, safe.size.x * 0.36)
+	var box := Rect2(safe.get_center().x - w * 0.5, safe.end.y - 128.0, w, 112.0)
+	var fade := clampf((9.0 - flight.elapsed) / 1.0, 0.0, 1.0)
+	draw_rect(box, Color(0, 0, 0, 0.6 * fade))
+	draw_rect(box, Color(CYAN, 0.35 * fade), false, 1.5)
 	for i in lines.size():
-		_text(Vector2(box.position.x, box.position.y + 30.0 + 28.0 * i), lines[i], 20, CYAN,
+		_text(Vector2(box.position.x, box.position.y + 26.0 + 24.0 * i), lines[i], 16, Color(CYAN, fade),
 			box.size.x, HORIZONTAL_ALIGNMENT_CENTER)
 
 
@@ -201,6 +223,13 @@ func _draw_cleared(safe: Rect2) -> void:
 			"Debt remaining: %s CR" % Fmt.cr(int(r.get("debt", 0))),
 			"Docking + delivery corridor come in a later build.",
 		], "TAP TO RETURN TO TITLE")
+	elif r.get("terminal", false):
+		_panel(safe, "SECTOR %d CLEARED" % int(r.get("sector", 0)), CYAN, [
+			"Salvage this sector: %s CR" % Fmt.cr(int(r.get("salvage", 0))),
+			"Run credits: %s CR" % Fmt.cr(flight.run.credits),
+			"!! INCOMING TRANSMISSION !!",
+			"Someone wants a word before the next jump.",
+		], "TAP TO ANSWER")
 	else:
 		_panel(safe, "SECTOR %d CLEARED" % int(r.get("sector", 0)), CYAN, [
 			"Salvage this sector: %s CR" % Fmt.cr(int(r.get("salvage", 0))),

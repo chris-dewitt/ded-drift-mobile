@@ -15,6 +15,7 @@ boot_splash/bg_color=Color(0.02, 0.025, 0.035, 1)
 [autoload]
 
 RunState="*res://game/core/run_state.gd"
+Audio="*res://game/audio/audio_director.gd"
 
 [display]
 

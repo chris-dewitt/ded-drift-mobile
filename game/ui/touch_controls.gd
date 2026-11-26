@@ -14,6 +14,7 @@ const HIT_SLOP := 1.3  # buttons accept touches a bit outside their circle
 
 const CYAN := Color(0.25, 0.88, 0.82)
 const AMBER := Color(1.0, 0.70, 0.28)
+const MAGENTA := Color(1.0, 0.28, 0.78)
 const WHITE := Color(1, 1, 1)
 
 var flight  # the flight scene (untyped to avoid a preload cycle)
@@ -214,7 +215,7 @@ func _draw() -> void:
 	_draw_stick(lay)
 	_draw_button(lay["thrust"], "THRUST", _role_held("thrust"), CYAN, "")
 	_draw_button(lay["retro"], "RETRO", _role_held("retro"), CYAN, "")
-	_draw_button(lay["fire"], "FIRE", _role_held("fire"), AMBER, "auto")
+	_draw_button(lay["fire"], "FIRE", _role_held("fire"), MAGENTA, "auto")
 	if flight.jump_ready:
 		var pulse := 0.5 + 0.5 * sin(Time.get_ticks_msec() / 130.0)
 		_draw_button(lay["jump"], "JUMP", _role_held("jump"), Color(CYAN, 0.6 + 0.4 * pulse), "")
@@ -239,7 +240,10 @@ func _draw_stick(lay: Dictionary) -> void:
 func _draw_button(spec: Array, label: String, held: bool, color: Color, sub: String) -> void:
 	var centre: Vector2 = spec[0]
 	var radius: float = spec[1]
-	draw_circle(centre, radius, Color(color, 0.32 if held else 0.10))
+	# Dark fill so world objects behind a button never read as part of it.
+	draw_circle(centre, radius, Color(0.0, 0.0, 0.0, 0.55))
+	draw_circle(centre, radius, Color(color, 0.32 if held else 0.08))
+	draw_arc(centre, radius, 0.0, TAU, 48, Color(color, 0.15), 9.0, true)
 	draw_arc(centre, radius, 0.0, TAU, 48, color, 3.0 if held else 2.0, true)
 	draw_string(_font, centre + Vector2(-radius, 7), label, HORIZONTAL_ALIGNMENT_CENTER,
 		radius * 2.0, 20, WHITE if held else color)

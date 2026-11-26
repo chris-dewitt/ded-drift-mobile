@@ -7,6 +7,8 @@ const BuildInfo := preload("res://game/core/build_info.gd")
 const Screen := preload("res://game/ui/screen.gd")
 const Fmt := preload("res://game/core/fmt.gd")
 const FLIGHT_SCENE := "res://game/flight/flight.tscn"
+const Backdrop := preload("res://game/flight/backdrop.gd")
+const CrtOverlay := preload("res://game/ui/crt_overlay.gd")
 
 const BG := Color(0.02, 0.025, 0.035)
 const AMBER := Color(1.0, 0.70, 0.28)
@@ -23,6 +25,7 @@ var _stars: Array[Vector3] = []  # x, y in 0..1; z = depth 0.2..1
 var _time := 0.0
 var _taps: Array = []  # each: [Vector2 pos, float age]
 var _launching := false
+var _backdrop := {}
 var _show_debug := false
 var _version_rect := Rect2()
 var _ship_pos := Vector2.ZERO
@@ -32,6 +35,13 @@ var _ship_rot := -0.3
 
 func _ready() -> void:
 	_font = ThemeDB.fallback_font
+	_backdrop = Backdrop.generate(1, Rect2(0, 0, 3600, 2100))
+	add_child(CrtOverlay.new())
+	var audio := get_node_or_null("/root/Audio")
+	if audio != null:
+		audio.set_mood("title")
+		audio.set_thrust(false)
+		audio.set_hull(100.0)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 404  # Local 404. Same sky every launch.
 	for _i in STAR_COUNT:
@@ -70,6 +80,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		_show_debug = not _show_debug
 	elif not _launching:
 		_launching = true
+		var audio := get_node_or_null("/root/Audio")
+		if audio != null:
+			audio.play("warp", -4.0)
 		var run := get_node("/root/RunState")
 		run.start_run()
 		get_tree().change_scene_to_file(FLIGHT_SCENE)
@@ -80,6 +93,11 @@ func _draw() -> void:
 	var safe := _safe_rect()
 	draw_rect(view, BG)
 	_draw_stars(view)
+	# Slow drift through the corporate skyline behind the logo.
+	var centre := Vector2(900.0 + _time * 18.0, 700.0 + sin(_time * 0.1) * 120.0)
+	draw_set_transform(view.size * 0.5 - centre)
+	Backdrop.draw(self, _backdrop, centre, view.size, _time, _font)
+	draw_set_transform(Vector2.ZERO)
 	_draw_ship(_ship_pos, _ship_rot)
 	_draw_title(safe)
 	_draw_prompt(safe)

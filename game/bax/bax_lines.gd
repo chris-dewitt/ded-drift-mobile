@@ -38,6 +38,14 @@ const CORE := [
 	"That's a gravity well, not a car wash!",
 	"Mind the singularity, it doesn't do refunds.",
 ]
+const RAIDERS := [
+	"Krellborn raiders! Pirates with dental plans. Shoot 'em!",
+	"Pirate fighters, guv. They're fast, but they're made of tinfoil.",
+]
+const DRONES := [
+	"Compliance drones. Little flying fines. Don't let 'em touch us!",
+	"Nova Soma drones inbound. They explode. Like their interest rates.",
+]
 const JUMP_READY := [
 	"Gate's hot! Hit JUMP when you're clear.",
 ]

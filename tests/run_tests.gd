@@ -9,6 +9,7 @@ const TEST_FILES := [
 	"res://tests/test_build_info.gd",
 	"res://tests/test_flight_logic.gd",
 	"res://tests/test_run_state.gd",
+	"res://tests/test_audio_enemies.gd",
 ]
 
 
