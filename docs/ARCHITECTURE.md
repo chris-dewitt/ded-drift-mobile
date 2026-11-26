@@ -101,8 +101,9 @@ The project rule is "keep security in mind". These items apply from M.0:
 3. **Saves are untrusted input.** Parse JSON, validate every field against a
    schema, clamp numbers, and drop unknown keys. A malformed save loads a
    fresh state with a warning. It never crashes the game.
-4. **Minimal permissions.** None at all until M.7. Then only `INTERNET`. No
-   storage, location or contacts permissions, ever.
+4. **Minimal permissions.** `VIBRATE` only (haptics; a normal permission with
+   no prompt). `INTERNET` only once M.7 ships. No storage, location or
+   contacts permissions, ever.
 5. **Network.** Use HTTPS only (no cleartext traffic). Verify certificates
    (Godot default; never disable it). Cap the response size and enforce timeouts.
 6. **Privacy.** Terminal text sent to the LLM is disclosed in-game. The LLM

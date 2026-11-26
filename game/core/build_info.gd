@@ -2,7 +2,7 @@ extends RefCounted
 ## Build identity shown on screen so playtest feedback names an exact build.
 ## CI rewrites BUILD and COMMIT before export; local runs stay "dev"/"local".
 
-const VERSION := "0.0.1"
+const VERSION := "0.1.0"
 const BUILD := "dev"
 const COMMIT := "local"
 

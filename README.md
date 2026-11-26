@@ -6,7 +6,17 @@
 built for phones from the ground up in **Godot 4**. Landscape, two thumbs:
 Newtonian flight, NLP terminals, delivery corridors.
 
-**Status:** M.0 (foundation). See [docs/ROADMAP.md](docs/ROADMAP.md).
+**Status:** v0.1.0, first playable flight build. See [docs/ROADMAP.md](docs/ROADMAP.md).
+
+### What you can play right now
+
+- **5-sector chapter.** Survive each sector until the gate opens, then hit JUMP.
+- **Touch flight.** Left thumb: floating AIM stick. Right thumb: THRUST, RETRO, FIRE (guns also auto-fire at whatever you aim at).
+- **Gravity wells.** Dive close and slingshot out for overdrive and credits. Hitting the core hurts.
+- **Local 404 repo barges.** They hunt you and harpoon you. Thrust hard to snap the tether, or shoot the barge.
+- **Debris and salvage.** Shoot rocks for credits, grab scrap (credits) and patch kits (hull).
+- **Death costs you.** Decanting invoice, debt goes up, retry the sector you died on. Debt, clones and chapters persist between sessions.
+- **Not in yet:** terminals, shops, docking and corridors, loadout, settings, sound.
 
 ## Playtest on your phone
 

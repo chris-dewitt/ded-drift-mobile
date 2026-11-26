@@ -46,6 +46,16 @@ jobs:
             echo "::error::Script errors in log"; exit 1
           fi
 
+      - name: End-to-end smoke test (real renderer under Xvfb)
+        run: |
+          set -o pipefail
+          command -v xvfb-run >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq xvfb; }
+          xvfb-run -a -s "-screen 0 1280x720x24" godot --path . --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/smoke_runner.gd 2>&1 | tee smoke.log
+          if grep -E "SCRIPT ERROR|Parse Error|Failed to load script|Invalid call|Invalid access" smoke.log; then
+            echo "::error::Script errors during smoke test"; exit 1
+          fi
+
   android:
     needs: test
     runs-on: ubuntu-24.04
