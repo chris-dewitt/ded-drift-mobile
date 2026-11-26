@@ -1,8 +1,8 @@
-# DEAD DRIFT: MOBILE
+# DED DRIFT
 
 > *Same debt. Same rusted ship. Now it fits in your pocket.*
 
-A new, **Android-only** game based on [Dead Drift](https://github.com/chris-dewitt/Dead-Drift),
+**Ded Drift** is a new, **Android-only** game based on [Dead Drift](https://github.com/chris-dewitt/Dead-Drift),
 built for phones from the ground up in **Godot 4**. Landscape, two thumbs:
 Newtonian flight, NLP terminals, delivery corridors.
 

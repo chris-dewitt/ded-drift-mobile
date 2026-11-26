@@ -130,9 +130,9 @@ func _draw_title(safe: Rect2) -> void:
 	var x := safe.position.x
 	var w := safe.size.x
 	var jitter := 2.0 + 1.5 * sin(_time * 2.3)
-	draw_string(_font, Vector2(x - jitter, y), "DEAD DRIFT", HORIZONTAL_ALIGNMENT_CENTER, w, size, RED_FRINGE)
-	draw_string(_font, Vector2(x + jitter, y), "DEAD DRIFT", HORIZONTAL_ALIGNMENT_CENTER, w, size, CYAN_FRINGE)
-	draw_string(_font, Vector2(x, y), "DEAD DRIFT", HORIZONTAL_ALIGNMENT_CENTER, w, size, AMBER)
+	draw_string(_font, Vector2(x - jitter, y), "DED DRIFT", HORIZONTAL_ALIGNMENT_CENTER, w, size, RED_FRINGE)
+	draw_string(_font, Vector2(x + jitter, y), "DED DRIFT", HORIZONTAL_ALIGNMENT_CENTER, w, size, CYAN_FRINGE)
+	draw_string(_font, Vector2(x, y), "DED DRIFT", HORIZONTAL_ALIGNMENT_CENTER, w, size, AMBER)
 	draw_string(_font, Vector2(x, y + 52), "5 sectors. crushing debt. one rusted ship.",
 		HORIZONTAL_ALIGNMENT_CENTER, w, 26, DIM)
 

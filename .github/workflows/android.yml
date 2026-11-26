@@ -88,7 +88,7 @@ jobs:
             echo "::add-mask::$PASS"
             "$JAVA_HOME_17_X64/bin/keytool" -genkeypair -noprompt -keystore "$KS" \
               -alias "$ALIAS" -storepass "$PASS" -keypass "$PASS" -keyalg RSA -keysize 2048 \
-              -validity 9999 -dname "CN=Dead Drift Debug,O=Dead Drift,C=US"
+              -validity 9999 -dname "CN=Ded Drift Debug,O=Ded Drift,C=US"
             echo "::warning::No DEBUG_KEYSTORE secrets: throwaway key, uninstall the old build before installing this one."
           fi
           {
@@ -115,8 +115,8 @@ jobs:
         run: |
           mkdir -p build
           godot --headless --path . --import
-          godot --headless --path . --export-debug "Android" "build/dead-drift-mobile-${LABEL}.apk" 2>&1 | tee export.log
-          test -s "build/dead-drift-mobile-${LABEL}.apk" || { echo "::error::APK not produced"; exit 1; }
+          godot --headless --path . --export-debug "Android" "build/ded-drift-${LABEL}.apk" 2>&1 | tee export.log
+          test -s "build/ded-drift-${LABEL}.apk" || { echo "::error::APK not produced"; exit 1; }
           ls -la build
 
       - name: Publish GitHub Release

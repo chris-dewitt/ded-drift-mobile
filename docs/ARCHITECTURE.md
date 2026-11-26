@@ -30,7 +30,7 @@ can lower its intensity.
 ## Project layout (planned)
 
 ```
-dead-drift-mobile/
+ded-drift-mobile/
   project.godot
   game/
     core/          # autoloads: GameState, RunState, MetaState, SaveService, Events, Settings

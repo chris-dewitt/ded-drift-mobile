@@ -9,7 +9,7 @@ Change a locked item only with Chris's sign-off, and record the change here.
 
 | # | Question | Answer | What it means for the build |
 |---|----------|--------|-----------------------------|
-| 1 | Rebuild or extend? | **New game, mobile only.** The original game stays untouched. | New directory `dead-drift-mobile/`, ready to split into its own repo. |
+| 1 | Rebuild or extend? | **New game, mobile only.** The original game stays untouched. | Its own repo: `chris-dewitt/ded-drift-mobile`. |
 | 2 | Platforms | **Android only** | Build for Android first. No iOS-driven compromises. |
 | 3 | Engine | **Open to anything** | **Godot 4** (see ARCHITECTURE.md). |
 | 4 | Shared code? | **Completely separate**, up to a new repo | Nothing shared at runtime. Content gets re-authored, not imported. |
@@ -59,7 +59,7 @@ Change a locked item only with Chris's sign-off, and record the change here.
 
 ## Open questions (answer when ready, nothing is blocked yet)
 
-1. **Working title:** "Dead Drift: Mobile", or a new name (it's a separate game)?
+1. ~~**Working title**~~ **Answered (Nov 26):** the game is **Ded Drift**. Android package `org.chrisdewitt.deddrift`.
 2. **LLM hosting budget:** what monthly cap is OK during testing? (The LLM layer is phase M.7, so this isn't urgent.)
 3. ~~**Separate GitHub repo**~~ **Answered (Nov 26):** `chris-dewitt/ded-drift-mobile`. Test target is a **Galaxy S26**. Signing key deferred; CI uses a throwaway key until the secrets are added.
 4. **Content changes:** is the mobile campaign allowed to change story beats, or only mechanics?

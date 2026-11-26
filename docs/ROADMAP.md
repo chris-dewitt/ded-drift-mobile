@@ -2,7 +2,7 @@
 
 **Started:** November 26 2026
 **Status:** pre-production. Docs locked, M.0 next.
-**North star for all agents working in `dead-drift-mobile/`.**
+**North star for all agents working in this repo (Ded Drift).**
 
 Each phase ends with a playable APK on a real device. One PR per phase
 (split a large phase into sub-PRs if needed). Tick boxes here only.

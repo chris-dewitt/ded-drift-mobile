@@ -1,6 +1,6 @@
-# DEAD DRIFT: MOBILE — Agent pointer
+# DED DRIFT — Agent pointer
 
-This repo (`ded-drift-mobile`) is a **separate, Android-only game** based on
+This repo (`ded-drift-mobile`) is **Ded Drift**, a **separate, Android-only game** based on
 Dead Drift (repo `chris-dewitt/Dead-Drift`).
 
 1. **Never copy code from, or depend on, the original Dead Drift game.** Read
