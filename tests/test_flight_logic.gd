@@ -63,7 +63,8 @@ func test_gravity_pulls_toward_well_and_falls_off() -> void:
 
 func _pass(tracker, closest: float, exit_speed: float) -> bool:
 	var got := false
-	for r in [300.0, 190.0, 120.0, closest, 120.0, 190.0, 250.0]:
+	# Enter the band (200), dive to `closest`, exit. Never dips below `closest`.
+	for r in [300.0, 190.0, closest, 190.0, 250.0]:
 		if tracker.update(r, exit_speed):
 			got = true
 	return got
