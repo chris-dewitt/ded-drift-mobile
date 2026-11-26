@@ -181,6 +181,55 @@ func _run() -> void:
 	flight.controls.inject_tap(Vector2(640, 400))
 	await _frames(4)
 	_check(_scene_name() == "TitleScreen", "tap after death returns to the title")
+
+	print("smoke: every 3rd jump -> terminal -> next sector")
+	var rs = root.get_node("RunState")
+	rs.sector = 3
+	rs.meta["jumps"] = 2
+	rs.meta["terminals"] = 0  # Gary answers
+	current_scene._unhandled_input(tap)
+	await _frames(4)
+	flight = current_scene
+	_check(_scene_name() == "Flight" and flight.has_method("_step"), "sector 3 starts")
+	flight.time_left = 0.0
+	flight._step(flight.STEP)
+	for b in flight.barges:
+		b.state = b.State.STUNNED
+		b.timer = 999.0
+	flight.controls.press_jump_for_test()
+	for _i in 200:
+		flight._step(flight.STEP)
+	_check(flight.phase == flight.Phase.CLEARED and flight.result.get("terminal", false), "jump 3 flags an incoming transmission")
+	await _frames(2)
+	flight.phase_timer = 10.0
+	flight.controls.inject_tap(Vector2(640, 400))
+	await _frames(4)
+	var term_ok: bool = _scene_name() == "TerminalScreen" and current_scene.has_method("submit_buffer")
+	_check(term_ok, "tapping answers the terminal")
+	if not term_ok:
+		_finish()
+		return
+	var term = current_scene
+	await _frames(3)
+	_check(term.npc["id"] == "gary", "Gary is on the line")
+	for ch in "union brother":
+		term.keyboard.press(" " if ch == " " else ch)  # SPACE key emits " " via typed
+	term.keyboard.press("ENTER")
+	_check(int(term.engine.progress["solidarity"]) == 1, "typing on the CRT keyboard reaches the rule engine")
+	term.insert_chip("dues")
+	term.submit_buffer()
+	term.buffer = "solidarity on the picket line"
+	term.submit_buffer()
+	_check(term.finished and term.outcome == "RELEASE", "solidarity path releases you")
+	_check(term.total_credits == 2500, "release pays 2,500")
+	await _frames(30)  # draw the outcome banner + let lines type out
+	var credits_before: int = rs.credits
+	term._outcome_age = 10.0
+	term._tap(Vector2(640, 600))
+	await _frames(4)
+	_check(_scene_name() == "Flight", "after the terminal you fly the next sector")
+	_check(rs.sector == 4, "into sector 4")
+	_check(rs.credits == credits_before + 2500, "terminal winnings are in your run credits")
 	_finish()
 
 

@@ -46,6 +46,9 @@ const DRONES := [
 	"Compliance drones. Little flying fines. Don't let 'em touch us!",
 	"Nova Soma drones inbound. They explode. Like their interest rates.",
 ]
+const ALERTED := [
+	"Every barge in the sector's got our plates thanks to that alarm. Fly like you mean it!",
+]
 const JUMP_READY := [
 	"Gate's hot! Hit JUMP when you're clear.",
 ]
@@ -59,6 +62,32 @@ const SCRAP := [
 	"Scrap! That's... four percent of one payment. Lovely.",
 	"More scrap. We're practically landed gentry.",
 ]
+
+
+# --- terminal -------------------------------------------------------------
+const TERMINAL := {
+	"open": ["Right, let me do the talkin'. Kidding. You type. I'll judge."],
+	"progress": ["Ooh, that landed. Keep pullin' that thread.", "They're warmin' up. Don't get clever now."],
+	"reject": ["Nope. Read the dossier, guv, it's right there.", "That went down like a lead balloon."],
+	"systems_fail": ["Careful! Three strikes and the alarm goes.", "They saw that comin' a mile off."],
+	"shell": ["A shell! Have a nose around. ls, cd, cat. Mind the sudo."],
+	"repl": ["Python, is it? Go on then, hacker. Try an import."],
+	"bribe_ask": ["Name a number. Not a big one. We're poor."],
+	"broke": ["We can't afford that, guv. We can't afford anythin'."],
+	"override_fail": ["That trick only works on robots, mate."],
+	"outcome_exploit": ["EXPLOIT! Ha! Five grand and they thanked us for it!"],
+	"outcome_release": ["Released! Polite AND paid. Who are you?"],
+	"outcome_bribed": ["Paid off. Cheaper than a funeral. Slightly."],
+	"outcome_deal": ["New plating! Smells like the previous owner's regrets."],
+	"outcome_impound": ["Impounded! Lovely. Half our credits, gone. Brilliant."],
+	"outcome_alarm": ["ALARM! Every barge in the sector's comin' for us now!"],
+	"outcome_walkaway": ["...Well. That's one way to end a call."],
+}
+
+
+static func terminal(beat: String) -> String:
+	var bank: Array = TERMINAL.get(beat, [])
+	return pick(bank) if not bank.is_empty() else ""
 
 
 static func pick(bank: Array) -> String:

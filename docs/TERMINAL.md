@@ -50,7 +50,7 @@ decision the engine already made. It can never move a credit.
 
 ## 2. Rule engine (offline, always on)
 
-Each NPC is a `.tres` resource:
+Each NPC is a data dictionary (`game/terminal/npc_data.gd`; may move to `.tres` later):
 
 | Field | Meaning |
 |-------|---------|

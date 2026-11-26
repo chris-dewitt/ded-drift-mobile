@@ -4,7 +4,7 @@ const SaveSchema := preload("res://game/core/save_schema.gd")
 
 
 func test_round_trip() -> void:
-	var meta := {"debt": 1234, "clones": 3, "chapters_completed": 2}
+	var meta := {"debt": 1234, "clones": 3, "chapters_completed": 2, "jumps": 7, "terminals": 2}
 	var result := SaveSchema.parse(SaveSchema.to_json(meta))
 	assert_true(result.ok, "valid save parses")
 	assert_eq(result.meta, meta, "round trip")

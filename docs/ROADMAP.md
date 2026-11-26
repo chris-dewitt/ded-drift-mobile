@@ -1,7 +1,7 @@
 # THE MOBILE PUSH — Roadmap
 
 **Started:** November 26 2026
-**Status:** M.0 done. First playable flight build (v0.1.0) covers most of M.1–M.3; see the notes on each item.
+**Status:** v0.2.0. Flight (M.1–M.3 mostly), soul pass (audio + CRT + backdrop), raiders/drones, and terminals (M.4 core) are in. **Delivery tunnels (M.5) are next**, per Chris: terminals and tunnels are half the game.
 **North star for all agents working in this repo (Ded Drift).**
 
 Each phase ends with a playable APK on a real device. One PR per phase
@@ -29,7 +29,7 @@ Each phase ends with a playable APK on a real device. One PR per phase
 - [~] Floating AIM stick, THRUST, RETRO, FIRE, JUMP. Classic scheme option not yet
 - [x] Safe-area anchoring. Top-bar HUD. Bax pill with event lines. Off-screen barge arrows
 - [~] Haptics on hits, clamps, slingshots, jump (VIBRATE permission). Settings toggle not yet
-- [~] Diegetic flicker/scramble with the "never scramble actionable text" rule. CRT post shader not yet
+- [x] Diegetic flicker/scramble with the "never scramble actionable text" rule. CRT post shader with hull-driven tearing
 - [ ] Device test: latency feels good, no accidental gesture-edge triggers
 
 ## M.3 — Run loop and saves
@@ -40,12 +40,12 @@ Each phase ends with a playable APK on a real device. One PR per phase
 - [ ] Save-fuzz tests: corrupt, oversized or hostile JSON loads a fresh state without crashing
 
 ## M.4 — Terminal core (offline)
-- [ ] TerminalScreen layout. CRT keyboard with code row. System-keyboard toggle. Scan chips insert text
-- [ ] Rule engine: normalize, negation, path matching, patience, hardening, outcomes. Economy rules (EXPLOIT 5k / RELEASE 2.5k / dual ledger / broke counter-offer)
-- [ ] NPC `.tres` schema and a validator. Schema tests (≥15 keywords, ≥3 paths, ≥1 systems path, reachability, bribe label)
-- [ ] Shell mode (whitelist commands over `shell_fs`, TAB complete, history). SQL matcher. REPL tokenizer plus pattern triggers (no eval, ever)
-- [ ] Security ladder: alarm on the 3rd failed attempt, barge chase on exit
-- [ ] Port **Gary**, **TK-9**, **Kress**. Jump terminal and toll wired into the loop
+- [x] TerminalScreen layout. CRT keyboard with code row. System-keyboard toggle. Scan chips insert text. Terminal every 3rd jump (Chris, Nov 26)
+- [x] Rule engine: normalize, negation, path matching, patience, outcomes. Economy rules (EXPLOIT 5k / RELEASE 2.5k / dual ledger / broke counter-offer). Hardening not yet
+- [x] NPC data (GDScript dictionaries for now) + schema tests (≥15 keywords, ≥3 paths, ≥1 systems path, every path reachable by a scripted playthrough, bribe label)
+- [~] Shell mode (whitelisted commands over the NPC filesystem). SQL matcher. REPL with structural danger detection + own arithmetic parser (no eval, ever). TAB complete and history not yet
+- [x] Security ladder: alarm on the 3rd failed attempt; next sector's barges hunt from second one
+- [x] Port **Gary**, **TK-9**, **Kress** (rotating). Toll terminals mid-sector not yet
 
 ## M.5 — Delivery
 - [ ] Dock: align beat (ring line bonus) and land beat (ALIGN + hold BURN, graded)
@@ -72,9 +72,9 @@ Each phase ends with a playable APK on a real device. One PR per phase
 - [ ] Bax full line banks, harmonica heal, BAX'S TAPES unlock
 
 ## M.9 — Audio
-- [ ] Offline render tool plus the procedural asset set
-- [ ] Bus layout and DSP (hull low-pass, Ch1 crush, tape hum)
-- [ ] Music director with 4 stem slots per chapter and placeholders. Recorded stems drop in whenever they're ready
+- [x] Procedural soundtrack + SFX rendered at startup on a background thread (no audio files)
+- [~] Bus layout and DSP: hull low-pass, tape hum. Ch1 crush not yet
+- [~] Music director: bed / pulse / tension / terminal layers crossfaded by danger mood. Recorded-stem slots not yet
 - [ ] Visual and haptic twins for all critical cues
 
 ## M.10 — Polish and performance

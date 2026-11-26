@@ -64,3 +64,19 @@ func test_corrupt_save_loads_defaults() -> void:
 	rs.load_meta()
 	assert_eq(rs.meta, SaveSchema.default_meta(), "corrupt save -> fresh meta, no crash")
 	rs.free()
+
+
+func test_terminal_every_third_jump() -> void:
+	var rs := _fresh()
+	assert_false(rs.complete_sector()["terminal"], "jump 1")
+	assert_false(rs.complete_sector()["terminal"], "jump 2")
+	assert_true(rs.complete_sector()["terminal"], "jump 3 brings a terminal")
+	assert_eq(rs.after_terminal, "flight")
+	rs.credits = 100
+	rs.finish_terminal(5000, 0, -20.0, true)
+	assert_eq(rs.credits, 5100, "terminal winnings land in run credits")
+	assert_eq(rs.hull, RunStateScript.HULL_MAX - 20.0)
+	assert_true(rs.barges_alerted, "alarm alerts the next sector")
+	assert_eq(int(rs.meta["terminals"]), 1, "next terminal rotates NPC")
+	rs.free()
+

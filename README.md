@@ -6,7 +6,7 @@
 built for phones from the ground up in **Godot 4**. Landscape, two thumbs:
 Newtonian flight, NLP terminals, delivery corridors.
 
-**Status:** v0.1.0, first playable flight build. See [docs/ROADMAP.md](docs/ROADMAP.md).
+**Status:** v0.2.0: flight with soul, plus terminals. See [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ### What you can play right now
 
@@ -16,7 +16,10 @@ Newtonian flight, NLP terminals, delivery corridors.
 - **Local 404 repo barges.** They hunt you and harpoon you. Thrust hard to snap the tether, or shoot the barge.
 - **Debris and salvage.** Shoot rocks for credits, grab scrap (credits) and patch kits (hull).
 - **Death costs you.** Decanting invoice, debt goes up, retry the sector you died on. Debt, clones and chapters persist between sessions.
-- **Not in yet:** terminals, shops, docking and corridors, loadout, settings, sound.
+- **More hostiles.** Krellborn pirate raiders (sector 2+) circle and shoot; Nova Soma Compliance drones (sector 3+) chase and explode.
+- **Terminals every 3rd jump.** Negotiate with Gary (Local 404), TK-9 (customs droid) or Kress (fixer) on a CRT keyboard with keyword chips, or hack them: shell (SH), SQL injection, Python (>>>), prompt injection. Dossier shows every win path. Honest numbers: exploit +5,000, release +2,500, bribes and purchases hit credits AND debt, 3 failed hacks sound the alarm.
+- **Soul.** Procedural synth soundtrack (D minor, Blade-Runner-ish) that follows the danger, SFX, Bax voice blips, CRT post-process, corporate-hellscape backdrop with Nova Soma ads.
+- **Not in yet:** shops, docking and delivery tunnels (next), loadout, settings menu.
 
 ## Playtest on your phone
 

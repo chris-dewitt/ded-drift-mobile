@@ -165,6 +165,8 @@ func _ready() -> void:
 	time_left = cfg["duration"]
 	_build_world()
 	backdrop = Backdrop.generate(run.sector, WORLD)
+	var alerted: bool = run.barges_alerted
+	run.barges_alerted = false
 	camera = Camera2D.new()
 	camera.position = ship.pos
 	camera.position_smoothing_enabled = true
@@ -182,7 +184,10 @@ func _ready() -> void:
 	crt = CrtOverlay.new()
 	add_child(crt)
 	_sound_mood("calm")
-	bax(BaxLines.sector_start(run.sector))
+	if alerted:
+		bax(BaxLines.pick(BaxLines.ALERTED))
+	else:
+		bax(BaxLines.sector_start(run.sector))
 
 
 # --- queries used by HUD / controls ---------------------------------------------
@@ -249,6 +254,10 @@ func _build_world() -> void:
 		b.home = Vector2(WORLD.size.x * _rng.randf_range(0.6, 0.9), WORLD.size.y * _rng.randf_range(0.2, 0.8))
 		b.pos = b.home
 		b.spawn_time = float(cfg["barge_delay"]) + 6.0 * i
+		if run.barges_alerted:
+			b.spawn_time = 1.0 + 3.0 * i
+			b.state = BargeBrain.State.PATROL
+			b.pos = _edge_spawn()
 		barges.append(b)
 	for i in int(cfg["raiders"]):
 		var r := RaiderBrain.new()
