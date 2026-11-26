@@ -118,7 +118,6 @@ jobs:
   # Plays the real APK on an Android emulator with the debug-only autopilot.
   # Catches on-device crashes the desktop smoke test can't see.
   emulator:
-    needs: test
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:

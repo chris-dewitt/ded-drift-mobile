@@ -25,6 +25,11 @@ func _initialize() -> void:
 		var audio = AudioScript.new()
 		audio.name = "Audio"
 		root.add_child(audio)
+	var settings = root.get_node_or_null("Settings")
+	if settings != null:
+		settings.dismiss_crash()  # this run tests gameplay, not the crash banner
+		settings.crt = true
+		settings.sound = true
 	rs.save_path = "user://smoke_meta.json"
 	rs.meta = SaveSchema.default_meta()
 	rs.sector = 1

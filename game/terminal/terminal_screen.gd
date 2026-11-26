@@ -48,6 +48,7 @@ var finished := false  # outcome reached; waiting for the tap to leave
 var outcome := ""
 
 var _lines: Array = []  # revealed [speaker, text]
+var _wrap_cache := {}  # "width|text" -> wrapped rows (measuring fonts every frame is slow on phones)
 var _queue: Array = []  # pending [speaker, text]
 var _typing := 0.0  # chars revealed of the head of _queue
 var _bax := ""
@@ -431,10 +432,13 @@ func _draw_transcript(r: Rect2) -> void:
 	var w := r.size.x - 20.0
 	var rows: Array = []  # [text, color] wrapped bottom-up
 	var all := _lines.duplicate()
+	var typing_index := -1
 	if not _queue.is_empty():
 		var head: Array = _queue[0]
+		typing_index = all.size()
 		all.append([head[0], String(head[1]).substr(0, int(_typing)) + ("_" if int(_time * 4.0) % 2 == 0 else "")])
-	for l in all:
+	for li in all.size():
+		var l: Array = all[li]
 		var col := WHITE
 		var prefix := ""
 		match String(l[0]):
@@ -447,7 +451,7 @@ func _draw_transcript(r: Rect2) -> void:
 				col = Color(0.55, 0.95, 0.6)
 			"err":
 				col = RED
-		for wrapped in _wrap(prefix + String(l[1]), w, font_size):
+		for wrapped in _wrap(prefix + String(l[1]), w, font_size, li != typing_index):
 			rows.append([wrapped, col])
 	var visible_rows := int((r.size.y - 12.0) / line_h)
 	var max_scroll := maxf(0.0, (rows.size() - visible_rows) * line_h)
@@ -459,7 +463,12 @@ func _draw_transcript(r: Rect2) -> void:
 		y += line_h
 
 
-func _wrap(text: String, width: float, font_size: int) -> Array:
+func _wrap(text: String, width: float, font_size: int, cache := true) -> Array:
+	var key := "%d|%s" % [int(width), text]
+	if cache and _wrap_cache.has(key):
+		return _wrap_cache[key]
+	if _wrap_cache.size() > 400:
+		_wrap_cache.clear()
 	var out: Array = []
 	for para in text.split("\n"):
 		var line := ""
@@ -471,6 +480,8 @@ func _wrap(text: String, width: float, font_size: int) -> Array:
 			else:
 				line = trial
 		out.append(line)
+	if cache:
+		_wrap_cache[key] = out
 	return out
 
 

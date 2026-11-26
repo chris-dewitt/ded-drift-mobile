@@ -28,6 +28,11 @@ func _ready() -> void:
 	_write_lock()
 
 
+## Clean shutdown (any platform): not a crash.
+func _exit_tree() -> void:
+	_clear_lock()
+
+
 func _notification(what: int) -> void:
 	match what:
 		NOTIFICATION_APPLICATION_PAUSED, NOTIFICATION_WM_CLOSE_REQUEST:
