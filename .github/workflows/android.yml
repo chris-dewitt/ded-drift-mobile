@@ -1,0 +1,137 @@
+name: Android build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash   # bash -eo pipefail
+
+env:
+  GODOT_VERSION: 4.5.1-stable
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Secret check
+        run: tools/ci/check_secrets.sh
+
+      - name: Install Godot (pinned, checksum-verified)
+        run: tools/ci/setup_godot.sh
+
+      - name: Import project
+        run: godot --headless --path . --import 2>&1 | tee import.log
+
+      - name: Run tests
+        run: |
+          set -o pipefail
+          godot --headless --path . --script res://tests/run_tests.gd 2>&1 | tee test.log
+          if grep -E "SCRIPT ERROR|Parse Error|Failed to load script" test.log import.log; then
+            echo "::error::Script errors in log"; exit 1
+          fi
+
+  android:
+    needs: test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: write   # publish the APK as a GitHub Release
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Install Godot + Android templates (pinned, checksum-verified)
+        run: WITH_TEMPLATES=1 tools/ci/setup_godot.sh
+
+      - name: Point Godot at the runner's Android SDK and JDK 17
+        run: |
+          mkdir -p ~/.config/godot
+          for f in editor_settings-4.tres editor_settings-4.5.tres; do
+            cat > ~/.config/godot/$f <<TRES
+          [gd_resource type="EditorSettings" format=3]
+
+          [resource]
+          export/android/android_sdk_path = "${ANDROID_SDK_ROOT}"
+          export/android/java_sdk_path = "${JAVA_HOME_17_X64}"
+          TRES
+          done
+
+      - name: Debug keystore (repo secret if set, else throwaway)
+        env:
+          DEBUG_KEYSTORE_B64: ${{ secrets.DEBUG_KEYSTORE_B64 }}
+          DEBUG_KEYSTORE_PASS: ${{ secrets.DEBUG_KEYSTORE_PASS }}
+        run: |
+          KS="$RUNNER_TEMP/debug.keystore"
+          if [ -n "${DEBUG_KEYSTORE_B64:-}" ] && [ -n "${DEBUG_KEYSTORE_PASS:-}" ]; then
+            echo "$DEBUG_KEYSTORE_B64" | base64 -d > "$KS"
+            ALIAS=dd; PASS="$DEBUG_KEYSTORE_PASS"
+            echo "Using fixed debug keystore from repo secrets."
+          else
+            PASS=$(openssl rand -hex 16); ALIAS=androiddebugkey
+            echo "::add-mask::$PASS"
+            "$JAVA_HOME_17_X64/bin/keytool" -genkeypair -noprompt -keystore "$KS" \
+              -alias "$ALIAS" -storepass "$PASS" -keypass "$PASS" -keyalg RSA -keysize 2048 \
+              -validity 9999 -dname "CN=Dead Drift Debug,O=Dead Drift,C=US"
+            echo "::warning::No DEBUG_KEYSTORE secrets: throwaway key, uninstall the old build before installing this one."
+          fi
+          {
+            echo "GODOT_ANDROID_KEYSTORE_DEBUG_PATH=$KS"
+            echo "GODOT_ANDROID_KEYSTORE_DEBUG_USER=$ALIAS"
+            echo "GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD=$PASS"
+          } >> "$GITHUB_ENV"
+
+      - name: Stamp build number
+        env:
+          RUN: ${{ github.run_number }}
+          PR: ${{ github.event.pull_request.number }}
+          SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          if [ -n "$PR" ]; then LABEL="pr${PR}-r${RUN}"; else LABEL="build-${RUN}"; fi
+          SHORT="${SHA:0:7}"
+          [[ "$LABEL" =~ ^[a-z0-9-]+$ && "$SHORT" =~ ^[0-9a-f]{7}$ ]] || exit 1
+          sed -i "s/^const BUILD := \"dev\"/const BUILD := \"$LABEL\"/; s/^const COMMIT := \"local\"/const COMMIT := \"$SHORT\"/" game/core/build_info.gd
+          sed -i "s/^version\/code=1$/version\/code=${RUN}/" export_presets.cfg
+          grep -E '^const (BUILD|COMMIT)' game/core/build_info.gd
+          echo "LABEL=$LABEL" >> "$GITHUB_ENV"
+
+      - name: Export debug APK
+        run: |
+          mkdir -p build
+          godot --headless --path . --import
+          godot --headless --path . --export-debug "Android" "build/dead-drift-mobile-${LABEL}.apk" 2>&1 | tee export.log
+          test -s "build/dead-drift-mobile-${LABEL}.apk" || { echo "::error::APK not produced"; exit 1; }
+          ls -la build
+
+      - name: Publish GitHub Release
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          if [ -n "$PR" ]; then
+            TAG="pr-${PR}"; TITLE="PR #${PR} test build (${LABEL})"
+            gh release delete "$TAG" --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag 2>/dev/null || true
+          else
+            TAG="$LABEL"; TITLE="Test build ${LABEL}"
+          fi
+          gh release create "$TAG" build/*.apk --repo "$GITHUB_REPOSITORY" --target "$SHA" \
+            --prerelease --title "$TITLE" \
+            --notes "Debug test build from commit ${SHA:0:7}. Install on your phone by tapping the .apk below. If install fails, uninstall the previous build first."
