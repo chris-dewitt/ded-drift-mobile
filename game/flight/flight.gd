@@ -666,8 +666,9 @@ func _draw_barge(b) -> void:
 	draw_string(_font, b.pos + Vector2(-18, 6), "404", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, color)
 	if b.state == BargeBrain.State.CLAMPED:
 		var pts := PackedVector2Array()
-		var to := ship.pos - b.pos
-		var side := to.orthogonal().normalized()
+		var b_pos: Vector2 = b.pos
+		var to: Vector2 = ship.pos - b_pos
+		var side: Vector2 = to.orthogonal().normalized()
 		for k in 13:
 			var f := k / 12.0
 			pts.append(b.pos + to * f + side * sin(f * PI * 3.0 + elapsed * 12.0) * 6.0)

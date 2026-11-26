@@ -57,8 +57,9 @@ func _run() -> void:
 	tap.position = Vector2(640, 420)
 	current_scene._unhandled_input(tap)
 	await _frames(3)
-	_check(_scene_name() == "Flight", "tapping the title starts a flight sector")
-	if _scene_name() != "Flight":
+	var loaded: bool = _scene_name() == "Flight" and current_scene.has_method("_step")
+	_check(loaded, "tapping the title starts a flight sector (and its script loads)")
+	if not loaded:
 		_finish()
 		return
 	var flight = current_scene
@@ -114,8 +115,9 @@ func _run() -> void:
 	flight.phase_timer = 10.0
 	flight.controls.inject_tap(Vector2(640, 400))
 	await _frames(4)
-	_check(not is_instance_valid(flight) and _scene_name() == "Flight", "tap continues to the next sector")
-	if _scene_name() != "Flight":
+	var next_ok: bool = not is_instance_valid(flight) and _scene_name() == "Flight" and current_scene.has_method("_step")
+	_check(next_ok, "tap continues to the next sector")
+	if not next_ok:
 		_finish()
 		return
 	flight = current_scene
