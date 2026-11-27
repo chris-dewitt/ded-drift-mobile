@@ -242,8 +242,8 @@ func _draw_crash_report(safe: Rect2) -> void:
 	var settings := get_node_or_null("/root/Settings")
 	if settings == null or not settings.last_session_crashed:
 		return
-	var lines: Array = ["Last session crashed. Screenshot this for Claude, then tap to dismiss.",
-		"Try switching CRT or SOUND off (top right) to narrow it down.", ""]
+	var note: String = settings.auto_safe_note if settings.auto_safe_note != "" else "Try switching CRT or SOUND off (top right)."
+	var lines: Array = ["Last session crashed. Screenshot this for Claude, then tap to dismiss.", note, ""]
 	for l in settings.last_log_tail:
 		lines.append(l)
 	if settings.last_log_tail.is_empty():

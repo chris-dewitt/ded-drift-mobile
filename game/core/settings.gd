@@ -17,6 +17,10 @@ var crt := true
 var sound := true
 var last_session_crashed := false
 var last_log_tail: Array[String] = []
+## Consecutive crashed sessions. Escalates safe mode automatically:
+## 1 crash -> CRT off, 2+ crashes -> sound off too. Reset by a clean session.
+var crash_streak := 0
+var auto_safe_note := ""
 
 
 func _ready() -> void:
@@ -25,7 +29,22 @@ func _ready() -> void:
 	last_session_crashed = FileAccess.file_exists(LOCK)
 	if last_session_crashed:
 		last_log_tail = _previous_log_tail(14)
+		crash_streak += 1
+		if crash_streak >= 1 and crt:
+			crt = false
+			auto_safe_note = "Safe mode: CRT effect switched OFF automatically."
+		if crash_streak >= 2 and sound:
+			sound = false
+			auto_safe_note = "Safe mode: CRT and SOUND switched OFF automatically."
+		_save()
 	_write_lock()
+
+
+## Called once the player has been playing a while without a crash.
+func mark_session_healthy() -> void:
+	if crash_streak != 0:
+		crash_streak = 0
+		_save()
 
 
 ## Clean shutdown (any platform): not a crash.
@@ -64,6 +83,16 @@ func _write_lock() -> void:
 		f.close()
 
 
+var _healthy_timer := 0.0
+
+
+func _process(delta: float) -> void:
+	if crash_streak > 0:
+		_healthy_timer += delta
+		if _healthy_timer > 120.0:
+			mark_session_healthy()
+
+
 func _clear_lock() -> void:
 	if FileAccess.file_exists(LOCK):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(LOCK))
@@ -100,10 +129,12 @@ func _load() -> void:
 	var d: Dictionary = json.data
 	crt = d.get("crt", true) == true
 	sound = d.get("sound", true) == true
+	var streak = d.get("crash_streak", 0)
+	crash_streak = clampi(int(streak), 0, 99) if (typeof(streak) == TYPE_FLOAT or typeof(streak) == TYPE_INT) else 0
 
 
 func _save() -> void:
 	var f := FileAccess.open(PATH, FileAccess.WRITE)
 	if f != null:
-		f.store_string(JSON.stringify({"crt": crt, "sound": sound}))
+		f.store_string(JSON.stringify({"crt": crt, "sound": sound, "crash_streak": crash_streak}))
 		f.close()
