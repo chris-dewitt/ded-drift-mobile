@@ -22,7 +22,9 @@ const MOODS := {
 }
 const SILENT_DB := -60.0
 const FADE_DB_PER_SEC := 30.0
-const SFX_VOICES := 10
+## Overlapping plays allowed per sound (each sound owns its own player).
+const POLYPHONY := {"gun": 6, "enemy_shot": 4, "hit": 4, "explode": 3, "key": 4}
+const DEFAULT_POLYPHONY := 2
 
 var is_ready := false
 var music_db := -6.0
@@ -33,8 +35,11 @@ var _layers := {}  # name -> AudioStreamPlayer
 var _layer_db := {}  # name -> current dB
 var _mood := "title"
 var _sfx := {}  # name -> AudioStreamWAV
-var _voices: Array[AudioStreamPlayer] = []
-var _next_voice := 0
+## CRASH FIX (on-device SIGSEGV in the Android audio thread): never swap the
+## stream of a player that may be playing. Every sound gets its own player,
+## assigned once, using max_polyphony for overlaps.
+var _players := {}  # sound name -> AudioStreamPlayer
+var _last_cutoff := 20000.0
 var _thrust: AudioStreamPlayer
 var _thrust_on := false
 var _hum: AudioStreamPlayer
@@ -116,11 +121,14 @@ func _on_rendered(pcm: Dictionary, sfx_pcm: Dictionary) -> void:
 	_hum.play()
 	for key in sfx_pcm:
 		_sfx[key] = Synth.make_stream(sfx_pcm[key], key == "thrust_loop")
-	for _i in SFX_VOICES:
+		if key == "thrust_loop":
+			continue
 		var v := AudioStreamPlayer.new()
+		v.stream = _sfx[key]
 		v.bus = "SFX"
+		v.max_polyphony = int(POLYPHONY.get(key, DEFAULT_POLYPHONY))
 		add_child(v)
-		_voices.append(v)
+		_players[key] = v
 	_thrust = AudioStreamPlayer.new()
 	_thrust.stream = _sfx["thrust_loop"]
 	_thrust.bus = "SFX"
@@ -164,18 +172,19 @@ func set_hull(hull: float) -> void:
 	if _lowpass == null:
 		return
 	var t := clampf(hull / 60.0, 0.0, 1.0)
-	_lowpass.cutoff_hz = lerpf(700.0, 20000.0, t * t)
+	var cutoff := lerpf(700.0, 20000.0, t * t)
+	if absf(cutoff - _last_cutoff) > _last_cutoff * 0.03:  # don't poke the audio thread every frame
+		_last_cutoff = cutoff
+		_lowpass.cutoff_hz = cutoff
 
 
 func play(sound: String, volume_db := 0.0, pitch := 1.0, jitter := 0.04) -> void:
-	if not is_ready or not _sfx.has(sound):
+	if not is_ready or not _players.has(sound):
 		return
-	var v := _voices[_next_voice]
-	_next_voice = (_next_voice + 1) % _voices.size()
-	v.stream = _sfx[sound]
+	var v: AudioStreamPlayer = _players[sound]
 	v.volume_db = volume_db + sfx_db
-	v.pitch_scale = maxf(0.1, pitch * (1.0 + randf_range(-jitter, jitter)))
-	v.play()
+	v.pitch_scale = clampf(pitch * (1.0 + randf_range(-jitter, jitter)), 0.25, 4.0)
+	v.play()  # polyphonic: overlaps up to max_polyphony, never swaps the stream
 
 
 ## Bax's voice: a tiny pitched square blip per few typed characters.

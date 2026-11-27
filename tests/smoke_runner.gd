@@ -157,6 +157,16 @@ func _run() -> void:
 				break
 			await process_frame
 		_check(audio.is_ready, "procedural soundtrack finished rendering")
+		# Regression: on-device SIGSEGV came from swapping a playing player's stream.
+		var gun_player = audio._players.get("gun")
+		_check(gun_player != null, "every sound owns its own player")
+		if gun_player != null:
+			var stream_before = gun_player.stream
+			for _i in 30:
+				audio.play("gun")
+				audio.play("hit")
+				audio.bax_blip()
+			_check(gun_player.stream == stream_before, "playing sounds never swaps a player's stream")
 		_check(audio.mood() == "chase" or audio.mood() == "calm", "flight sets a music mood")
 
 	print("smoke: pause")
