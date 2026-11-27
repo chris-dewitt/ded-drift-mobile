@@ -41,16 +41,33 @@ static func to_pcm(samples: PackedFloat32Array) -> PackedByteArray:
 	return bytes
 
 
+## Extra frames appended after every sound. CRASH FIX (on-device SIGSEGV in
+## the Android audio thread at the first music loop): the mixer's resampler
+## reads a few frames past loop_end, and with the data ending exactly there it
+## read off the end of the buffer. Looping sounds get a copy of their first
+## frames (seamless wrap), one-shots get silence.
+const TAIL_FRAMES := 256
+
+
 static func make_stream(pcm: PackedByteArray, loop: bool) -> AudioStreamWAV:
+	var frames := pcm.size() / 2
+	var data := pcm.duplicate()
+	if loop and frames > 0:
+		var head := pcm.slice(0, mini(TAIL_FRAMES, frames) * 2)
+		while data.size() < (frames + TAIL_FRAMES) * 2:
+			data.append_array(head)
+		data.resize((frames + TAIL_FRAMES) * 2)
+	else:
+		data.resize((frames + TAIL_FRAMES) * 2)  # zero-filled
 	var w := AudioStreamWAV.new()
 	w.format = AudioStreamWAV.FORMAT_16_BITS
 	w.mix_rate = RATE
 	w.stereo = false
-	w.data = pcm
+	w.data = data
 	if loop:
 		w.loop_mode = AudioStreamWAV.LOOP_FORWARD
 		w.loop_begin = 0
-		w.loop_end = pcm.size() / 2
+		w.loop_end = frames  # loop over the real audio; the tail is only read-ahead
 	return w
 
 
