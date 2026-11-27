@@ -11,10 +11,16 @@ ADB="$SDK/platform-tools/adb"
 
 fail() { echo "::error::$1"; echo "----- emulator.log -----"; tail -n 80 emulator.log 2>/dev/null; exit 1; }
 
+# avdmanager and the emulator must agree on where AVDs live.
+export ANDROID_AVD_HOME="$HOME/.android/avd"
+mkdir -p "$ANDROID_AVD_HOME"
+
 ls -l /dev/kvm || echo "::warning::no /dev/kvm"
 yes 2>/dev/null | "$BIN/sdkmanager" --licenses >/dev/null 2>&1 || true
 "$BIN/sdkmanager" --install "emulator" "platform-tools" "$IMG" >/dev/null || fail "sdkmanager install failed"
-echo no | "$BIN/avdmanager" create avd -n dd -k "$IMG" -d pixel_6 --force >/dev/null || fail "avd create failed"
+echo no | "$BIN/avdmanager" create avd -n dd -k "$IMG" --force || fail "avd create failed"
+"$SDK/emulator/emulator" -list-avds
+[ -f "$ANDROID_AVD_HOME/dd.ini" ] || fail "AVD dd.ini missing in $ANDROID_AVD_HOME"
 "$SDK/emulator/emulator" -accel-check || true
 nohup "$SDK/emulator/emulator" -avd dd -no-window -no-audio -no-boot-anim -no-snapshot \
   -gpu swiftshader_indirect -memory 4096 -accel on > emulator.log 2>&1 &
