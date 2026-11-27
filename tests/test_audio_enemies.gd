@@ -33,6 +33,19 @@ func test_music_layers_loop_and_align() -> void:
 	assert_eq(wav.loop_end, Synth.RATE * 2, "loop end in samples")
 
 
+func test_streams_have_read_ahead_tail() -> void:
+	# Regression for the on-device SIGSEGV at the first music loop.
+	var pcm := Synth.to_pcm(Synth.render_pad())
+	var frames := pcm.size() / 2
+	var loop := Synth.make_stream(pcm, true)
+	assert_eq(loop.loop_end, frames, "loop covers exactly the real audio")
+	assert_eq(loop.data.size(), (frames + Synth.TAIL_FRAMES) * 2, "data has a tail past loop_end")
+	assert_eq(loop.data.slice(frames * 2, frames * 2 + 64), pcm.slice(0, 64), "tail repeats the loop start (seamless)")
+	var shot := Synth.make_stream(Synth.to_pcm(Synth.sweep(0.05, 800.0, 400.0, 20.0)), false)
+	assert_true(shot.data.size() > 0 and shot.data.slice(shot.data.size() - 8) == PackedByteArray([0, 0, 0, 0, 0, 0, 0, 0]),
+		"one-shots end in silence padding")
+
+
 func test_raider_orbits_and_fires() -> void:
 	var r := RaiderBrain.new()
 	r.pos = Vector2(2000, 0)
