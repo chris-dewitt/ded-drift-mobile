@@ -12,6 +12,8 @@ const META_FIELDS := {
 	"debt": [0, 1_000_000_000, 250_000],
 	"clones": [0, 100_000, 0],
 	"chapters_completed": [0, 6, 0],
+	"jumps": [0, 1_000_000_000, 0],
+	"terminals": [0, 1_000_000_000, 0],
 }
 
 

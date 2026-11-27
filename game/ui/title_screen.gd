@@ -1,9 +1,14 @@
 extends Node2D
-## M.0 title screen. Proves the build installs, runs landscape, takes touch,
-## respects the safe area (punch-hole / rounded corners), and reports which
-## build it is. Everything is drawn in code: no imported assets yet.
+## Title screen. Tap anywhere to launch a run (or continue from the sector
+## you died on). Tap the version label for the debug panel. Everything is
+## drawn in code: no imported assets yet.
 
 const BuildInfo := preload("res://game/core/build_info.gd")
+const Screen := preload("res://game/ui/screen.gd")
+const Fmt := preload("res://game/core/fmt.gd")
+const FLIGHT_SCENE := "res://game/flight/flight.tscn"
+const Backdrop := preload("res://game/flight/backdrop.gd")
+const CrtOverlay := preload("res://game/ui/crt_overlay.gd")
 
 const BG := Color(0.02, 0.025, 0.035)
 const AMBER := Color(1.0, 0.70, 0.28)
@@ -14,30 +19,32 @@ const CYAN_FRINGE := Color(0.2, 0.9, 1.0, 0.45)
 
 const STAR_COUNT := 160
 const TAP_RING_LIFE := 0.6
-const TOAST_LIFE := 3.5
-
-const BAX_LINES := [
-	"Oi. Nothin' past this screen yet, guv. Chris is still boltin' the engine on.",
-	"Tap all you like, the flight module's in a crate somewhere. M.1, they reckon.",
-	"You're keen. I respect keen. Keen don't make engines appear, mind.",
-]
 
 var _font: Font
 var _stars: Array[Vector3] = []  # x, y in 0..1; z = depth 0.2..1
 var _time := 0.0
 var _taps: Array = []  # each: [Vector2 pos, float age]
-var _toast := ""
-var _toast_age := TOAST_LIFE
-var _bax_index := 0
+var _launching := false
+var _backdrop := {}
 var _show_debug := false
 var _version_rect := Rect2()
 var _ship_pos := Vector2.ZERO
 var _ship_vel := Vector2(22.0, -7.0)
 var _ship_rot := -0.3
+var _crt_rect := Rect2()
+var _sound_rect := Rect2()
+var _crash_rect := Rect2()
 
 
 func _ready() -> void:
 	_font = ThemeDB.fallback_font
+	_backdrop = Backdrop.generate(1, Rect2(0, 0, 3600, 2100))
+	add_child(CrtOverlay.new())
+	var audio := get_node_or_null("/root/Audio")
+	if audio != null:
+		audio.set_mood("title")
+		audio.set_thrust(false)
+		audio.set_hull(100.0)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 404  # Local 404. Same sky every launch.
 	for _i in STAR_COUNT:
@@ -49,16 +56,8 @@ func _view() -> Rect2:
 	return get_viewport_rect()
 
 
-## Safe area in viewport (canvas) coordinates.
 func _safe_rect() -> Rect2:
-	var view := _view()
-	var screen_safe := Rect2(DisplayServer.get_display_safe_area())
-	if screen_safe.size.x <= 0.0 or screen_safe.size.y <= 0.0:
-		return view
-	var to_canvas := get_viewport().get_final_transform().affine_inverse()
-	var safe: Rect2 = to_canvas * screen_safe
-	var clipped := safe.intersection(view)
-	return clipped if clipped.has_area() else view
+	return Screen.safe_rect(get_viewport())
 
 
 func _process(delta: float) -> void:
@@ -71,7 +70,6 @@ func _process(delta: float) -> void:
 	for tap in _taps:
 		tap[1] += delta
 	_taps = _taps.filter(func(t): return t[1] < TAP_RING_LIFE)
-	_toast_age += delta
 	queue_redraw()
 
 
@@ -81,12 +79,27 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	var pos := touch.position
 	_taps.append([pos, 0.0])
-	if _version_rect.grow(24.0).has_point(pos):
+	var settings := get_node_or_null("/root/Settings")
+	if settings != null and _crt_rect.has_point(pos):
+		settings.set_crt(not settings.crt)
+		get_tree().reload_current_scene()  # rebuild with / without the CRT pass
+	elif settings != null and _sound_rect.has_point(pos):
+		settings.set_sound(not settings.sound)
+		var audio := get_node_or_null("/root/Audio")
+		if audio != null and settings.sound:
+			audio.start_render()
+	elif settings != null and settings.last_session_crashed:
+		settings.dismiss_crash()  # first tap just dismisses the crash report
+	elif _version_rect.grow(24.0).has_point(pos):
 		_show_debug = not _show_debug
-	else:
-		_toast = BAX_LINES[_bax_index % BAX_LINES.size()]
-		_bax_index += 1
-		_toast_age = 0.0
+	elif not _launching:
+		_launching = true
+		var audio := get_node_or_null("/root/Audio")
+		if audio != null:
+			audio.play("warp", -4.0)
+		var run := get_node("/root/RunState")
+		run.start_run()
+		get_tree().change_scene_to_file(FLIGHT_SCENE)
 
 
 func _draw() -> void:
@@ -94,14 +107,21 @@ func _draw() -> void:
 	var safe := _safe_rect()
 	draw_rect(view, BG)
 	_draw_stars(view)
+	# Slow drift through the corporate skyline behind the logo.
+	var centre := Vector2(900.0 + _time * 18.0, 700.0 + sin(_time * 0.1) * 120.0)
+	draw_set_transform(view.size * 0.5 - centre)
+	Backdrop.draw(self, _backdrop, centre, view.size, _time, _font)
+	draw_set_transform(Vector2.ZERO)
 	_draw_ship(_ship_pos, _ship_rot)
 	_draw_title(safe)
 	_draw_prompt(safe)
 	_draw_taps()
-	_draw_toast(safe)
+	_draw_status(safe)
 	_draw_version(safe)
+	_draw_toggles(safe)
 	if _show_debug:
 		_draw_debug(view, safe)
+	_draw_crash_report(safe)
 	_draw_scanlines(view)
 
 
@@ -140,7 +160,10 @@ func _draw_title(safe: Rect2) -> void:
 func _draw_prompt(safe: Rect2) -> void:
 	var alpha := 0.35 + 0.65 * (0.5 + 0.5 * sin(_time * 3.0))
 	var y := safe.position.y + safe.size.y * 0.74
-	draw_string(_font, Vector2(safe.position.x, y), "TAP TO START",
+	var run := get_node_or_null("/root/RunState")
+	var sector: int = run.sector if run != null else 1
+	var prompt := "TAP TO LAUNCH" if sector <= 1 else "TAP TO CONTINUE · SECTOR %d" % sector
+	draw_string(_font, Vector2(safe.position.x, y), prompt,
 		HORIZONTAL_ALIGNMENT_CENTER, safe.size.x, 34, Color(CYAN, alpha))
 
 
@@ -150,16 +173,15 @@ func _draw_taps() -> void:
 		draw_arc(tap[0], 18.0 + 46.0 * t, 0.0, TAU, 40, Color(CYAN, 1.0 - t), 2.0, true)
 
 
-func _draw_toast(safe: Rect2) -> void:
-	if _toast_age >= TOAST_LIFE or _toast.is_empty():
+func _draw_status(safe: Rect2) -> void:
+	var run := get_node_or_null("/root/RunState")
+	if run == null:
 		return
-	var alpha := clampf((TOAST_LIFE - _toast_age) / 0.4, 0.0, 1.0)
-	var w := minf(safe.size.x - 48.0, 980.0)
-	var box := Rect2(safe.position.x + (safe.size.x - w) * 0.5, safe.position.y + 20.0, w, 64.0)
-	draw_rect(box, Color(0.0, 0.0, 0.0, 0.75 * alpha))
-	draw_rect(box, Color(AMBER, alpha), false, 2.0)
-	draw_string(_font, box.position + Vector2(18, 26), "BAX", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color(AMBER, alpha))
-	draw_string(_font, box.position + Vector2(18, 50), _toast, HORIZONTAL_ALIGNMENT_LEFT, w - 36.0, 20, Color(1, 1, 1, alpha))
+	var meta: Dictionary = run.meta
+	var line := "DEBT %s CR  ·  CLONES %d  ·  CHAPTERS %d/6" % [
+		Fmt.cr(int(meta["debt"])), int(meta["clones"]), int(meta["chapters_completed"])]
+	draw_string(_font, Vector2(safe.position.x, safe.position.y + safe.size.y * 0.84), line,
+		HORIZONTAL_ALIGNMENT_CENTER, safe.size.x, 20, DIM)
 
 
 func _draw_version(safe: Rect2) -> void:
@@ -196,3 +218,42 @@ func _draw_scanlines(view: Rect2) -> void:
 	while y < view.size.y:
 		draw_line(Vector2(0, y), Vector2(view.size.x, y), Color(0, 0, 0, 0.18), 1.0)
 		y += 3.0
+
+
+## Safe-mode toggles, top-right. Big enough for a thumb.
+func _draw_toggles(safe: Rect2) -> void:
+	var settings := get_node_or_null("/root/Settings")
+	if settings == null:
+		return
+	_sound_rect = Rect2(safe.end.x - 190.0, safe.position.y + 14.0, 176.0, 52.0)
+	_crt_rect = Rect2(safe.end.x - 380.0, safe.position.y + 14.0, 176.0, 52.0)
+	for pair in [[_crt_rect, "CRT", settings.crt], [_sound_rect, "SOUND", settings.sound]]:
+		var r: Rect2 = pair[0]
+		var on: bool = pair[2]
+		var col := CYAN if on else DIM
+		draw_rect(r, Color(0, 0, 0, 0.6))
+		draw_rect(r, col, false, 2.0)
+		draw_string(_font, Vector2(r.position.x, r.position.y + 34.0), "%s: %s" % [pair[1], "ON" if on else "OFF"],
+			HORIZONTAL_ALIGNMENT_CENTER, r.size.x, 22, col)
+
+
+## Shown once after a session that didn't close cleanly.
+func _draw_crash_report(safe: Rect2) -> void:
+	var settings := get_node_or_null("/root/Settings")
+	if settings == null or not settings.last_session_crashed:
+		return
+	var lines: Array = ["Last session crashed. Screenshot this for Claude, then tap to dismiss.",
+		"Try switching CRT or SOUND off (top right) to narrow it down.", ""]
+	for l in settings.last_log_tail:
+		lines.append(l)
+	if settings.last_log_tail.is_empty():
+		lines.append("(no log from the last session)")
+	var box := Rect2(safe.position.x + 40.0, safe.position.y + 80.0, safe.size.x - 80.0, 30.0 + 21.0 * lines.size())
+	_crash_rect = box
+	draw_rect(box, Color(0.08, 0.0, 0.0, 0.92))
+	draw_rect(box, Color(1.0, 0.3, 0.26), false, 2.0)
+	for i in lines.size():
+		draw_string(_font, Vector2(box.position.x + 14.0, box.position.y + 24.0 + 21.0 * i), String(lines[i]),
+			HORIZONTAL_ALIGNMENT_LEFT, box.size.x - 28.0, 14 if i > 2 else 17,
+			Color(1.0, 0.75, 0.7) if i > 2 else Color(1.0, 0.4, 0.35))
+

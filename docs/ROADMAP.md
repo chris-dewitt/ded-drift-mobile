@@ -1,7 +1,7 @@
 # THE MOBILE PUSH — Roadmap
 
 **Started:** November 26 2026
-**Status:** pre-production. Docs locked, M.0 next.
+**Status:** v0.2.0. Flight (M.1–M.3 mostly), soul pass (audio + CRT + backdrop), raiders/drones, and terminals (M.4 core) are in. **Delivery tunnels (M.5) are next**, per Chris: terminals and tunnels are half the game.
 **North star for all agents working in this repo (Ded Drift).**
 
 Each phase ends with a playable APK on a real device. One PR per phase
@@ -10,41 +10,42 @@ Each phase ends with a playable APK on a real device. One PR per phase
 ---
 
 ## M.0 — Foundation
-- [ ] Godot 4.x stable pinned. `project.godot`: 1280×720, `canvas_items` + `expand`, `sensor_landscape`, `gl_compatibility`
-- [ ] Folder layout per ARCHITECTURE.md. Autoload stubs (`Events`, `Settings`, `SaveService`, `MetaState`, `RunState`)
-- [ ] Headless test runner (in-house, no deps). Save-validation tests passing
-- [ ] CI: headless test run and a debug APK export on push, published as a GitHub Release. Secret check script
-- [ ] `.gitignore` covers keystores, `export_presets` credentials and `.godot/`
-- [ ] Title-screen APK runs on Chris's phone (Galaxy S26): landscape, touch, safe area, debug panel
+- [x] Godot 4.x stable pinned. `project.godot`: 1280×720, `canvas_items` + `expand`, `sensor_landscape`, `gl_compatibility`
+- [~] Folder layout per ARCHITECTURE.md. `RunState` autoload exists; `Events`/`Settings`/`SaveService` arrive when needed
+- [x] Headless test runner (in-house, no deps). Save-validation tests passing
+- [x] CI: headless test run and a debug APK export on push, published as a GitHub Release. Secret check script
+- [x] CI end-to-end smoke test drives the real screens (title → flight → jump → next sector → pause → death → title) under Xvfb. A tap that does nothing fails the build
+- [x] `.gitignore` covers keystores, `export_presets` credentials and `.godot/`
+- [x] Title-screen APK runs on Chris's phone (Galaxy S26). Feedback: "no game started". Fixed in v0.1.0
 
 ## M.1 — Flight core
-- [ ] `ShipBody` fixed-tick Newtonian integration (forces accumulated, `dt` only in `integrate`)
-- [ ] Gravity wells, slingshot detection, overdrive cap
-- [ ] Gun, debris, fuel canisters. One sector theme (wrecks)
-- [ ] Barge state machine: patrol → chase → aim → intercept → clamp → torch. Tether spring and snap
-- [ ] Tuning pass at 1280-wide (MAX_VELOCITY, overdrive)
+- [x] `ShipBody` fixed-tick Newtonian integration (forces accumulated, `dt` only in `integrate`)
+- [x] Gravity wells, slingshot detection, overdrive cap
+- [x] Gun (auto-fire assist), debris that splits, salvage + patch pickups. Five named sectors (palette/themes still shared)
+- [~] Barge state machine: patrol → chase → clamp (harpoon tether, hull drain) → stunned. Tether snap and shoot-to-break. Aim/torch-module beats not yet
+- [ ] Tuning pass at 1280-wide (MAX_VELOCITY, overdrive). **Needs Chris's phone feedback**
 
 ## M.2 — Touch controls and HUD
-- [ ] Floating AIM stick, THRUST, RETRO, FIRE, JUMP. Classic scheme option
-- [ ] Safe-area anchoring. Top-bar HUD. Collapsible Bax pill (placeholder lines)
-- [ ] Haptics service with the toggle
-- [ ] CRT post shader with an intensity setting. Diegetic flicker/scramble with the "never scramble actionable text" rule
+- [~] Floating AIM stick, THRUST, RETRO, FIRE, JUMP. Classic scheme option not yet
+- [x] Safe-area anchoring. Top-bar HUD. Bax pill with event lines. Off-screen barge arrows
+- [~] Haptics on hits, clamps, slingshots, jump (VIBRATE permission). Settings toggle not yet
+- [x] Diegetic flicker/scramble with the "never scramble actionable text" rule. CRT post shader with hull-driven tearing
 - [ ] Device test: latency feels good, no accidental gesture-edge triggers
 
 ## M.3 — Run loop and saves
-- [ ] Menu → loadout draft → 5 sectors → chapter-complete stub → death invoice
-- [ ] Meta state: debt, clones, stepped death fees
-- [ ] JSON saves: schema-validated, atomic writes, 3 slots, autosave (25 s, transitions, app pause)
+- [~] Title → 5 sectors → chapter-complete stub → death invoice (retry same sector). Loadout draft not yet
+- [x] Meta state: debt, clones, chapters, stepped death fees (persisted to `user://meta.json`)
+- [~] JSON saves: schema-validated, atomic writes for meta. App switch auto-pauses. 3 slots + mid-sector autosave not yet
 - [ ] Kill the app mid-sector and resume into pause at the same spot (device test)
 - [ ] Save-fuzz tests: corrupt, oversized or hostile JSON loads a fresh state without crashing
 
 ## M.4 — Terminal core (offline)
-- [ ] TerminalScreen layout. CRT keyboard with code row. System-keyboard toggle. Scan chips insert text
-- [ ] Rule engine: normalize, negation, path matching, patience, hardening, outcomes. Economy rules (EXPLOIT 5k / RELEASE 2.5k / dual ledger / broke counter-offer)
-- [ ] NPC `.tres` schema and a validator. Schema tests (≥15 keywords, ≥3 paths, ≥1 systems path, reachability, bribe label)
-- [ ] Shell mode (whitelist commands over `shell_fs`, TAB complete, history). SQL matcher. REPL tokenizer plus pattern triggers (no eval, ever)
-- [ ] Security ladder: alarm on the 3rd failed attempt, barge chase on exit
-- [ ] Port **Gary**, **TK-9**, **Kress**. Jump terminal and toll wired into the loop
+- [x] TerminalScreen layout. CRT keyboard with code row. System-keyboard toggle. Scan chips insert text. Terminal every 3rd jump (Chris, Nov 26)
+- [x] Rule engine: normalize, negation, path matching, patience, outcomes. Economy rules (EXPLOIT 5k / RELEASE 2.5k / dual ledger / broke counter-offer). Hardening not yet
+- [x] NPC data (GDScript dictionaries for now) + schema tests (≥15 keywords, ≥3 paths, ≥1 systems path, every path reachable by a scripted playthrough, bribe label)
+- [~] Shell mode (whitelisted commands over the NPC filesystem). SQL matcher. REPL with structural danger detection + own arithmetic parser (no eval, ever). TAB complete and history not yet
+- [x] Security ladder: alarm on the 3rd failed attempt; next sector's barges hunt from second one
+- [x] Port **Gary**, **TK-9**, **Kress** (rotating). Toll terminals mid-sector not yet
 
 ## M.5 — Delivery
 - [ ] Dock: align beat (ring line bonus) and land beat (ALIGN + hold BURN, graded)
@@ -71,9 +72,9 @@ Each phase ends with a playable APK on a real device. One PR per phase
 - [ ] Bax full line banks, harmonica heal, BAX'S TAPES unlock
 
 ## M.9 — Audio
-- [ ] Offline render tool plus the procedural asset set
-- [ ] Bus layout and DSP (hull low-pass, Ch1 crush, tape hum)
-- [ ] Music director with 4 stem slots per chapter and placeholders. Recorded stems drop in whenever they're ready
+- [x] Procedural soundtrack + SFX rendered at startup on a background thread (no audio files)
+- [~] Bus layout and DSP: hull low-pass, tape hum. Ch1 crush not yet
+- [~] Music director: bed / pulse / tension / terminal layers crossfaded by danger mood. Recorded-stem slots not yet
 - [ ] Visual and haptic twins for all critical cues
 
 ## M.10 — Polish and performance

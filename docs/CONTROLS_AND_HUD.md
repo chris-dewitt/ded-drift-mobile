@@ -23,8 +23,9 @@ under the system gesture edges, and everything respects safe areas.
   angular acceleration, so it's still Newtonian: no instant snaps and no thrust from aiming.
 - **THRUST (right thumb):** hold to fire the main engine. **RETRO** (60%
   reverse) sits next to it.
-- **FIRE:** hold to shoot. A setting adds **auto-fire at the nearest target
-  within the aim cone** for players who want one less button.
+- **FIRE:** hold to shoot. **Auto-fire assist is on by default** (v0.1.0): guns
+  fire on their own at anything inside a narrow cone off the nose, so the right
+  thumb can stay on THRUST. A setting to turn it off comes with the settings menu.
 - **Slingshot cue:** a gravity well's capture arc glows when your trajectory
   would slingshot. It's a skill aid that stays readable on a small screen.
 - **"Classic" option:** rotate-left and rotate-right buttons plus THRUST,

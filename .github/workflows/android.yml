@@ -46,6 +46,16 @@ jobs:
             echo "::error::Script errors in log"; exit 1
           fi
 
+      - name: End-to-end smoke test (real renderer under Xvfb)
+        run: |
+          set -o pipefail
+          command -v xvfb-run >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq xvfb; }
+          xvfb-run -a -s "-screen 0 1280x720x24" godot --path . --rendering-driver opengl3 --audio-driver Dummy \
+            --script res://tests/smoke_runner.gd 2>&1 | tee smoke.log
+          if grep -E "SCRIPT ERROR|Parse Error|Failed to load script|Invalid call|Invalid access" smoke.log; then
+            echo "::error::Script errors during smoke test"; exit 1
+          fi
+
   android:
     needs: test
     runs-on: ubuntu-24.04
@@ -60,42 +70,11 @@ jobs:
       - name: Install Godot + Android templates (pinned, checksum-verified)
         run: WITH_TEMPLATES=1 tools/ci/setup_godot.sh
 
-      - name: Point Godot at the runner's Android SDK and JDK 17
-        run: |
-          mkdir -p ~/.config/godot
-          for f in editor_settings-4.tres editor_settings-4.5.tres; do
-            cat > ~/.config/godot/$f <<TRES
-          [gd_resource type="EditorSettings" format=3]
-
-          [resource]
-          export/android/android_sdk_path = "${ANDROID_SDK_ROOT}"
-          export/android/java_sdk_path = "${JAVA_HOME_17_X64}"
-          TRES
-          done
-
-      - name: Debug keystore (repo secret if set, else throwaway)
+      - name: Android SDK/JDK + debug keystore (repo secret if set, else throwaway)
         env:
           DEBUG_KEYSTORE_B64: ${{ secrets.DEBUG_KEYSTORE_B64 }}
           DEBUG_KEYSTORE_PASS: ${{ secrets.DEBUG_KEYSTORE_PASS }}
-        run: |
-          KS="$RUNNER_TEMP/debug.keystore"
-          if [ -n "${DEBUG_KEYSTORE_B64:-}" ] && [ -n "${DEBUG_KEYSTORE_PASS:-}" ]; then
-            echo "$DEBUG_KEYSTORE_B64" | base64 -d > "$KS"
-            ALIAS=dd; PASS="$DEBUG_KEYSTORE_PASS"
-            echo "Using fixed debug keystore from repo secrets."
-          else
-            PASS=$(openssl rand -hex 16); ALIAS=androiddebugkey
-            echo "::add-mask::$PASS"
-            "$JAVA_HOME_17_X64/bin/keytool" -genkeypair -noprompt -keystore "$KS" \
-              -alias "$ALIAS" -storepass "$PASS" -keypass "$PASS" -keyalg RSA -keysize 2048 \
-              -validity 9999 -dname "CN=Ded Drift Debug,O=Ded Drift,C=US"
-            echo "::warning::No DEBUG_KEYSTORE secrets: throwaway key, uninstall the old build before installing this one."
-          fi
-          {
-            echo "GODOT_ANDROID_KEYSTORE_DEBUG_PATH=$KS"
-            echo "GODOT_ANDROID_KEYSTORE_DEBUG_USER=$ALIAS"
-            echo "GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD=$PASS"
-          } >> "$GITHUB_ENV"
+        run: tools/ci/android_env.sh
 
       - name: Stamp build number
         env:
@@ -135,3 +114,40 @@ jobs:
           gh release create "$TAG" build/*.apk --repo "$GITHUB_REPOSITORY" --target "$SHA" \
             --prerelease --title "$TITLE" \
             --notes "Debug test build from commit ${SHA:0:7}. Install on your phone by tapping the .apk below. If install fails, uninstall the previous build first."
+
+  # Plays the real APK on an Android emulator with the debug-only autopilot.
+  # Catches on-device crashes the desktop smoke test can't see.
+  emulator:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Install Godot + Android templates (pinned, checksum-verified)
+        run: WITH_TEMPLATES=1 tools/ci/setup_godot.sh
+
+      - name: Android SDK/JDK + throwaway debug keystore
+        run: tools/ci/android_env.sh
+
+      - name: Export x86_64 debug APK for the emulator
+        run: |
+          sed -i 's/^architectures\/x86_64=false$/architectures\/x86_64=true/' export_presets.cfg
+          mkdir -p build
+          godot --headless --path . --import
+          godot --headless --path . --export-debug "Android" build/emu.apk 2>&1 | tail -n 5
+          test -s build/emu.apk || { echo "::error::emulator APK not produced"; exit 1; }
+
+      - name: Boot Android emulator
+        run: tools/ci/boot_emulator.sh
+
+      - name: Play the APK on Android (autopilot, 4 minutes)
+        run: tools/ci/emulator_smoke.sh build/emu.apk 240
+
